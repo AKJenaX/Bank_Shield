@@ -6,11 +6,14 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
 RUN pip install --no-cache-dir --upgrade pip
-RUN pip install --no-cache-dir fastapi uvicorn pydantic openai
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt fastapi uvicorn pydantic openai openenv-core
 
 COPY app ./app
 COPY graders ./graders
 COPY data ./data
+COPY agents ./agents
+COPY inference.py .
 
 EXPOSE 7860
 

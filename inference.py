@@ -121,10 +121,14 @@ def run_episode(
 
     print(f"[START] task={task_name} env={env_label} model={model_name}")
 
-    reset_resp = env.reset(task_name)
-    observation = reset_resp.get("observation") or reset_resp.get("obs") or reset_resp.get("state") or reset_resp
-    if not isinstance(observation, dict):
-        observation = {"prompt": str(observation)}
+    try:
+        reset_resp = env.reset(task_name)
+        observation = reset_resp.get("observation") or reset_resp.get("obs") or reset_resp.get("state") or reset_resp
+        if not isinstance(observation, dict):
+            observation = {"prompt": str(observation)}
+    except Exception as e:
+        print(f"[ERROR] Failed to reset environment: {e}")
+        return EpisodeResult(success=False, steps=0, score=0.0, rewards=[])
 
     rewards: List[float] = []
     success = True
