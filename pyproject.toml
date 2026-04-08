@@ -7,14 +7,18 @@ name = "my-openenv-anomaly"
 version = "1.0.0"
 description = "Transaction anomaly triage environment for fraud operations teams"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
     "requests>=2.31.0",
     "openai>=1.0.0",
     "fastapi",
     "uvicorn",
-    "pydantic"
+    "pydantic",
+    "openenv-core>=0.2.0"
 ]
+
+[project.scripts]
+server = "server.app:run_server"
 
 [tool.setuptools.packages.find]
 exclude = ["tests*", "frontend*"]
