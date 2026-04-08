@@ -1,3 +1,12 @@
+---
+title: BankShield Agent
+emoji: 🛡️
+colorFrom: blue
+colorTo: purple
+sdk: docker
+pinned: false
+---
+
 # my-openenv-anomaly
 
 Real-world simulation of transaction anomaly triage, a task performed by fraud
