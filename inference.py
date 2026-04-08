@@ -4,12 +4,18 @@ import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
+from urllib import error as urllib_error
+from urllib import request as urllib_request
 from typing import Any, Dict, List, Optional, Tuple
 
-import requests
-
-from agents.agent_utils import format_prompt, parse_action_from_text
-from agents.llm_client import LLMClient, get_llm_client
+try:
+    from agents.agent_utils import format_prompt, parse_action_from_text
+    from agents.llm_client import LLMClient, get_llm_client
+except ImportError:
+    LLMClient = Any
+    get_llm_client = lambda: None
+    format_prompt = lambda x: ""
+    parse_action_from_text = lambda x: {}
 
 
 @dataclass
@@ -26,25 +32,37 @@ class ClientEnv:
         if not self._base_url:
             raise ValueError("Missing required env var: SPACE_URL")
         self._timeout_s = timeout_s
-        self._session = requests.Session()
+
+    def _post_json(self, path: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+        body = json.dumps(payload).encode("utf-8")
+        request = urllib_request.Request(
+            url=f"{self._base_url}{path}",
+            data=body,
+            headers={"Content-Type": "application/json", "Accept": "application/json"},
+            method="POST",
+        )
+        try:
+            with urllib_request.urlopen(request, timeout=self._timeout_s) as response:
+                raw_body = response.read().decode("utf-8")
+        except urllib_error.HTTPError as exc:
+            error_body = exc.read().decode("utf-8", errors="replace")
+            raise RuntimeError(f"HTTP {exc.code} calling {path}: {error_body}") from exc
+        except urllib_error.URLError as exc:
+            raise RuntimeError(f"Network error calling {path}: {exc.reason}") from exc
+
+        try:
+            parsed = json.loads(raw_body)
+        except json.JSONDecodeError as exc:
+            raise RuntimeError(f"Invalid JSON from {path}: {raw_body[:200]}") from exc
+        if not isinstance(parsed, dict):
+            raise RuntimeError(f"Unexpected response type from {path}: {type(parsed).__name__}")
+        return parsed
 
     def reset(self, task_name: str) -> Dict[str, Any]:
-        resp = self._session.post(
-            f"{self._base_url}/reset",
-            json={"task_name": task_name},
-            timeout=self._timeout_s,
-        )
-        resp.raise_for_status()
-        return resp.json()
+        return self._post_json("/reset", {"task_name": task_name})
 
     def step(self, action: Dict[str, Any]) -> Dict[str, Any]:
-        resp = self._session.post(
-            f"{self._base_url}/step",
-            json=action,
-            timeout=self._timeout_s,
-        )
-        resp.raise_for_status()
-        return resp.json()
+        return self._post_json("/step", action)
 
 
 def _load_env_file_if_present() -> None:
