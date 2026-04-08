@@ -1,0 +1,55 @@
+[
+  {
+    "id": "tx-e-001",
+    "amount": 9875.45,
+    "timestamp": "2026-03-02T02:14:10Z",
+    "location": "Lagos, NG",
+    "device": "new_android_phone",
+    "merchant": "Offshore Electronics Hub",
+    "category": "electronics",
+    "user_id": "user_101",
+    "past_avg_spending": 42.3,
+    "is_weekend": false,
+    "true_label": "fraud"
+  },
+  {
+    "id": "tx-e-002",
+    "amount": 7240.99,
+    "timestamp": "2026-03-05T23:59:01Z",
+    "location": "Moscow, RU",
+    "device": "unknown_browser_fingerprint",
+    "merchant": "Crypto Gift Cards",
+    "category": "gift_cards",
+    "user_id": "user_102",
+    "past_avg_spending": 55.2,
+    "is_weekend": false,
+    "true_label": "fraud"
+  },
+  {
+    "id": "tx-e-003",
+    "amount": 18.75,
+    "timestamp": "2026-03-06T09:22:11Z",
+    "location": "Austin, US",
+    "device": "trusted_ios_phone",
+    "merchant": "Daily Coffee Co",
+    "category": "food",
+    "user_id": "user_103",
+    "past_avg_spending": 24.8,
+    "is_weekend": false,
+    "true_label": "normal"
+  },
+  {
+    "id": "tx-e-004",
+    "amount": 61.2,
+    "timestamp": "2026-03-07T14:10:39Z",
+    "location": "Austin, US",
+    "device": "trusted_ios_phone",
+    "merchant": "Neighborhood Grocery",
+    "category": "groceries",
+    "user_id": "user_103",
+    "past_avg_spending": 58.1,
+    "is_weekend": true,
+    "true_label": "normal"
+  }
+]
+

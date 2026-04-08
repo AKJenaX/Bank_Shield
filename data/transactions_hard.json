@@ -1,0 +1,68 @@
+[
+  {
+    "id": "tx-h-001",
+    "amount": 138.4,
+    "timestamp": "2026-03-11T00:48:22Z",
+    "location": "San Jose, US",
+    "device": "trusted_ios_phone",
+    "merchant": "Premium Streaming Bundle",
+    "category": "subscriptions",
+    "user_id": "user_301",
+    "past_avg_spending": 124.1,
+    "is_weekend": false,
+    "true_label": "fraud"
+  },
+  {
+    "id": "tx-h-002",
+    "amount": 152.9,
+    "timestamp": "2026-03-11T00:55:03Z",
+    "location": "San Jose, US",
+    "device": "trusted_ios_phone",
+    "merchant": "Premium Streaming Bundle",
+    "category": "subscriptions",
+    "user_id": "user_301",
+    "past_avg_spending": 124.1,
+    "is_weekend": false,
+    "true_label": "fraud"
+  },
+  {
+    "id": "tx-h-003",
+    "amount": 79.2,
+    "timestamp": "2026-03-11T08:05:49Z",
+    "location": "San Jose, US",
+    "device": "trusted_ios_phone",
+    "merchant": "Neighborhood Grocery",
+    "category": "groceries",
+    "user_id": "user_301",
+    "past_avg_spending": 82.8,
+    "is_weekend": false,
+    "true_label": "normal"
+  },
+  {
+    "id": "tx-h-004",
+    "amount": 241.75,
+    "timestamp": "2026-03-12T19:41:17Z",
+    "location": "Toronto, CA",
+    "device": "trusted_laptop_browser",
+    "merchant": "Business Software Tools",
+    "category": "software",
+    "user_id": "user_302",
+    "past_avg_spending": 235.6,
+    "is_weekend": false,
+    "true_label": "normal"
+  },
+  {
+    "id": "tx-h-005",
+    "amount": 268.3,
+    "timestamp": "2026-03-12T19:53:11Z",
+    "location": "Toronto, CA",
+    "device": "trusted_laptop_browser",
+    "merchant": "Business Software Tools",
+    "category": "software",
+    "user_id": "user_302",
+    "past_avg_spending": 235.6,
+    "is_weekend": false,
+    "true_label": "fraud"
+  }
+]
+

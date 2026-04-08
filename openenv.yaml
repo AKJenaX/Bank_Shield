@@ -1,0 +1,23 @@
+name: my-openenv-anomaly
+version: "1.0"
+entrypoint: app.main:app
+description: Transaction anomaly triage environment for fraud operations teams
+domain: financial-operations
+environment_type: api
+interface:
+  observation_model: app.models.Observation
+  action_model: app.models.Action
+  reward_model: app.models.Reward
+tasks:
+  - id: anomaly_easy
+    difficulty: easy
+    objective: Flag obvious fraud and allow clear normal transactions
+    grader: graders.easy_grader.EasyGrader
+  - id: anomaly_medium
+    difficulty: medium
+    objective: Balance false positives and missed fraud on mixed-signal transactions
+    grader: graders.medium_grader.MediumGrader
+  - id: anomaly_hard
+    difficulty: hard
+    objective: Sustain high precision/recall under repeated edge-pattern behavior
+    grader: graders.hard_grader.HardGrader

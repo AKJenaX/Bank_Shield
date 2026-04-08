@@ -1,0 +1,55 @@
+[
+  {
+    "id": "tx-m-001",
+    "amount": 412.35,
+    "timestamp": "2026-03-08T21:31:00Z",
+    "location": "Berlin, DE",
+    "device": "trusted_ios_phone",
+    "merchant": "Digital Gadgets Outlet",
+    "category": "electronics",
+    "user_id": "user_201",
+    "past_avg_spending": 175.4,
+    "is_weekend": true,
+    "true_label": "fraud"
+  },
+  {
+    "id": "tx-m-002",
+    "amount": 145.0,
+    "timestamp": "2026-03-09T06:05:47Z",
+    "location": "Chicago, US",
+    "device": "new_laptop_browser",
+    "merchant": "RideShare Plus",
+    "category": "transport",
+    "user_id": "user_202",
+    "past_avg_spending": 132.7,
+    "is_weekend": false,
+    "true_label": "normal"
+  },
+  {
+    "id": "tx-m-003",
+    "amount": 980.0,
+    "timestamp": "2026-03-10T03:10:19Z",
+    "location": "Miami, US",
+    "device": "trusted_android_phone",
+    "merchant": "Luxury Watches Direct",
+    "category": "luxury_goods",
+    "user_id": "user_203",
+    "past_avg_spending": 210.3,
+    "is_weekend": false,
+    "true_label": "fraud"
+  },
+  {
+    "id": "tx-m-004",
+    "amount": 89.75,
+    "timestamp": "2026-03-10T18:25:40Z",
+    "location": "Seattle, US",
+    "device": "trusted_android_phone",
+    "merchant": "Family Pharmacy",
+    "category": "health",
+    "user_id": "user_204",
+    "past_avg_spending": 83.5,
+    "is_weekend": false,
+    "true_label": "normal"
+  }
+]
+
