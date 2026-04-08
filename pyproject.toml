@@ -18,7 +18,7 @@ dependencies = [
 ]
 
 [project.scripts]
-server = "server.app:run_server"
+server = "server.app:main"
 
 [tool.setuptools.packages.find]
 exclude = ["tests*", "frontend*"]
