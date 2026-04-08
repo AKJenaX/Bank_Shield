@@ -1,3 +1,11 @@
+---
+title: My Openenv Anomaly
+emoji: 🛡️
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 7860
+---
 # my-openenv-anomaly
 
 Real-world simulation of transaction anomaly triage, a task performed by fraud
