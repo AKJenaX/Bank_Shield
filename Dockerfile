@@ -10,6 +10,7 @@ RUN pip install --no-cache-dir fastapi uvicorn pydantic openai
 
 COPY app ./app
 COPY graders ./graders
+COPY data ./data
 
 EXPOSE 7860
 
