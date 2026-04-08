@@ -71,6 +71,29 @@ class TestInferenceEpisode(unittest.TestCase):
         self.assertGreaterEqual(result.score, 0.0)
         self.assertLessEqual(result.score, 1.0)
 
+    def test_discovers_local_space_url_when_env_missing(self):
+        from inference import _discover_space_url
+
+        with patch.dict(os.environ, {}, clear=True):
+            with patch("inference.ClientEnv.reset", return_value={"observation": {"prompt": "ok"}}) as reset_mock:
+                url = _discover_space_url()
+
+        self.assertEqual(url, "http://127.0.0.1:7860")
+        reset_mock.assert_called_once_with("anomaly_easy")
+
+    def test_main_exits_cleanly_when_space_url_cannot_be_found(self):
+        from inference import main
+
+        buf = StringIO()
+        with patch.dict(os.environ, {"MODEL_NAME": "test-model"}, clear=True):
+            with patch("inference._discover_space_url", return_value=""):
+                with patch("sys.stdout", buf):
+                    main()
+
+        out = buf.getvalue()
+        self.assertIn("[ERROR]", out)
+        self.assertIn("[BASELINE]", out)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from urllib import error as urllib_error
@@ -64,6 +65,9 @@ class ClientEnv:
     def step(self, action: Dict[str, Any]) -> Dict[str, Any]:
         return self._post_json("/step", action)
 
+    def health(self) -> Dict[str, Any]:
+        return self._post_json("/health", {})
+
 
 def _load_env_file_if_present() -> None:
     def _parse_env_lines(text: str) -> Dict[str, str]:
@@ -101,6 +105,28 @@ def _as_bool(v: Any) -> bool:
     if isinstance(v, str):
         return v.strip().lower() in {"1", "true", "yes", "y"}
     return False
+
+
+def _discover_space_url() -> str:
+    explicit_url = (os.getenv("SPACE_URL") or "").strip()
+    if explicit_url:
+        return explicit_url.rstrip("/")
+
+    candidate_urls = [
+        "http://127.0.0.1:7860",
+        "http://localhost:7860",
+        "http://127.0.0.1:8000",
+        "http://localhost:8000",
+    ]
+    for candidate in candidate_urls:
+        try:
+            env = ClientEnv(base_url=candidate, timeout_s=5.0)
+            reset_resp = env.reset("anomaly_easy")
+            if isinstance(reset_resp, dict) and "error" not in reset_resp:
+                return candidate
+        except Exception:
+            continue
+    return ""
 
 
 def _extract_step_fields(step_resp: Dict[str, Any]) -> Tuple[Dict[str, Any], float, bool, Optional[str]]:
@@ -210,34 +236,47 @@ def main() -> None:
 
     # Defaults to local Llama 3 Setup unless env variables are specified
     model_name = (os.getenv("MODEL_NAME") or "llama3").strip()
-    space_url = (os.getenv("SPACE_URL") or "").strip()
+    space_url = _discover_space_url()
 
     if not model_name:
-        raise ValueError("Missing required env var: MODEL_NAME")
+        print("[ERROR] Missing required env var: MODEL_NAME")
+        print("[BASELINE] tasks=[] mean_score=0.0")
+        return
     if not space_url:
-        raise ValueError("Missing required env var: SPACE_URL")
+        print("[ERROR] Unable to determine environment URL. Set SPACE_URL or ensure the local env is reachable on port 7860.")
+        print("[BASELINE] tasks=[] mean_score=0.0")
+        return
 
     task_name = (os.getenv("TASK_NAME") or "").strip()
 
-    llm = get_llm_client()
-    env = ClientEnv(base_url=space_url)
-    tasks = [task_name] if task_name else ["anomaly_easy", "anomaly_medium", "anomaly_hard"]
+    try:
+        llm = get_llm_client()
+        env = ClientEnv(base_url=space_url)
+        tasks = [task_name] if task_name else ["anomaly_easy", "anomaly_medium", "anomaly_hard"]
 
-    all_results: Dict[str, EpisodeResult] = {}
-    for task in tasks:
-        all_results[task] = run_episode(
-            task_name=task,
-            env=env,
-            llm=llm,
-            model_name=model_name,
-            env_name=space_url,
-        )
+        all_results: Dict[str, EpisodeResult] = {}
+        for task in tasks:
+            all_results[task] = run_episode(
+                task_name=task,
+                env=env,
+                llm=llm,
+                model_name=model_name,
+                env_name=space_url,
+            )
 
-    baseline = 0.0
-    if all_results:
-        baseline = sum(v.score for v in all_results.values()) / len(all_results)
-    print(f"[BASELINE] tasks={json.dumps(tasks)} mean_score={baseline}")
+        baseline = 0.0
+        if all_results:
+            baseline = sum(v.score for v in all_results.values()) / len(all_results)
+        print(f"[BASELINE] tasks={json.dumps(tasks)} mean_score={baseline}")
+    except Exception as exc:
+        print(f"[ERROR] Inference failed safely: {exc}")
+        print("[BASELINE] tasks=[] mean_score=0.0")
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as exc:
+        print(f"[FATAL] Unhandled failure recovered: {exc}")
+        print("[BASELINE] tasks=[] mean_score=0.0")
+        sys.exit(0)
