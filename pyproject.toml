@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "my-openenv-anomaly"
+version = "1.0.0"
+description = "Transaction anomaly triage environment for fraud operations teams"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "requests>=2.31.0",
+    "openai>=1.0.0",
+    "fastapi",
+    "uvicorn",
+    "pydantic"
+]
+
+[tool.setuptools.packages.find]
+exclude = ["tests*", "frontend*"]
