@@ -73,6 +73,21 @@ env = _build_environment()
 initialized = False
 
 
+@app.get("/")
+def root() -> dict[str, str]:
+    return {
+        "title": "RL Transaction Environment API",
+        "version": "1.0.0",
+        "description": "API for transaction anomaly detection environment",
+        "endpoints": {
+            "health": "/health",
+            "reset": "/reset",
+            "step": "/step",
+            "state": "/state"
+        }
+    }
+
+
 def health() -> dict[str, str]:
     return {"status": "ok"}
 
