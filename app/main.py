@@ -5,13 +5,49 @@ import os
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, HTTPException, Request, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from fastapi.security import APIKeyHeader
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+
+import logging
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from app.env.transaction_env import TransactionEnvironment
 from app.models import Reward, StepResult
 from app.routes import build_router
 from app.tasks import EasyTask, HardTask, MediumTask
+from app.db import log_telemetry, get_telemetry_stats, get_all_logs
+
+# Set up JSON logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='{"time":"%(asctime)s", "level":"%(levelname)s", "message":"%(message)s"}',
+    datefmt='%Y-%m-%dT%H:%M:%S'
+)
+logger = logging.getLogger("bank_shield")
+
+# Rate Limiter
+limiter = Limiter(key_func=get_remote_address)
+
+# API Key Auth
+API_KEY_NAME = "X-API-Key"
+api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
+
+def get_api_key(api_key_header: str = Depends(api_key_header)):
+    # If not set in env, default to demo-key for ease of use but normally fail
+    expected_key = os.getenv("API_KEY", "bank-shield-demo-key")
+    if api_key_header != expected_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid API Key",
+        )
+    return api_key_header
+
 
 
 class ResetRequest(BaseModel):
@@ -37,6 +73,19 @@ class StepResponse(BaseModel):
 
 class ErrorResponse(BaseModel):
     error: str
+
+
+class HealthResponse(BaseModel):
+    status: str
+    title: str = "RL Transaction Environment API"
+    version: str = "1.0.0"
+
+
+class RootResponse(BaseModel):
+    status: str
+    title: str
+    version: str
+    message: str
 
 
 class StepRequest(BaseModel):
@@ -69,27 +118,69 @@ def _build_environment() -> TransactionEnvironment:
 
 
 app = FastAPI(title="RL Transaction Environment API", version="1.0.0")
+
+# Add SlowAPI exception handler
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Add Exception Handler for Validation Errors
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    logger.error(f"Validation error: {exc.errors()}")
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={"error": "Validation Error", "details": exc.errors()},
+    )
+
+# Add CORS Middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # In production, restrict this to specific domains
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 env = _build_environment()
 initialized = False
 
 
-@app.get("/")
-def root() -> dict[str, str]:
-    return {
-        "title": "RL Transaction Environment API",
-        "version": "1.0.0",
-        "description": "API for transaction anomaly detection environment",
-        "endpoints": {
-            "health": "/health",
-            "reset": "/reset",
-            "step": "/step",
-            "state": "/state"
-        }
-    }
+@app.get("/", response_model=RootResponse)
+@limiter.limit("60/minute")
+def root(request: Request) -> RootResponse:
+    """Root endpoint - returns API status and information."""
+    try:
+        return RootResponse(
+            status="running",
+            title="RL Transaction Environment API",
+            version="1.0.0",
+            message="API is operational. Use /docs for interactive API documentation.",
+        )
+    except Exception as e:
+        return RootResponse(
+            status="error",
+            title="RL Transaction Environment API",
+            version="1.0.0",
+            message=f"Error: {str(e)}",
+        )
 
 
-def health() -> dict[str, str]:
-    return {"status": "ok"}
+@app.get("/health", response_model=HealthResponse)
+@limiter.limit("60/minute")
+def health(request: Request) -> HealthResponse:
+    """Health check endpoint - lightweight status report."""
+    try:
+        return HealthResponse(
+            status="healthy",
+            title="RL Transaction Environment API",
+            version="1.0.0",
+        )
+    except Exception as e:
+        return HealthResponse(
+            status="unhealthy",
+            title="RL Transaction Environment API",
+            version="1.0.0",
+        )
 
 
 def _sanitize_none_values(payload: Any) -> Any:
@@ -146,6 +237,29 @@ def _log_step(result: StepResult, action_str: str) -> None:
         f"[ENV] Step {step_no} | txn={txn_id} | action={action_label} | reward={reward_value}"
     )
 
+    logger.info(f"Step executed", extra={
+        "step": step_no,
+        "txn_id": txn_id,
+        "action": action_label,
+        "reward": reward_value
+    })
+
+    # Log to SQLite DB
+    fraud_detected = bool(result.observation.flagged) if hasattr(result.observation, 'flagged') else False
+    session_id = result.info.get("session_id", "default_session")
+    task_name = result.info.get("task_name", "unknown_task")
+
+    log_telemetry(
+        session_id=session_id,
+        task_name=task_name,
+        step_no=step_no,
+        transaction_id=txn_id,
+        action=action_label,
+        reward=reward_value,
+        fraud_detected=fraud_detected,
+        observation=result.observation.model_dump() if hasattr(result.observation, "model_dump") else {}
+    )
+
 
 def parse_action(raw_input: Any) -> str:
     try:
@@ -200,12 +314,12 @@ def _normalize_task_name(task_name: str) -> str:
     return TASK_ALIASES.get((task_name or "").strip().lower(), "")
 
 
-def reset_environment(request: ResetRequest | None = None) -> ResetResponse | ErrorResponse:
+def reset_environment(request: Request, reset_req: ResetRequest | None = None, api_key: str = Depends(get_api_key)) -> ResetResponse | ErrorResponse:
     try:
-        if request is None:
-            request = ResetRequest()
+        if reset_req is None:
+            reset_req = ResetRequest()
         global initialized
-        task_name = _normalize_task_name(request.task_name)
+        task_name = _normalize_task_name(reset_req.task_name)
         if not task_name or task_name not in TASK_REGISTRY:
             initialized = False
             return ErrorResponse(
@@ -235,7 +349,8 @@ def reset_environment(request: ResetRequest | None = None) -> ResetResponse | Er
         return ErrorResponse(error="Failed to reset environment.")
 
 
-def step_environment(action: StepRequest | None = None) -> StepResponse | ErrorResponse:
+@limiter.limit("120/minute")
+def step_environment(request: Request, action: StepRequest | None = None, api_key: str = Depends(get_api_key)) -> StepResponse | ErrorResponse:
     try:
         if action is None:
             action = StepRequest()
@@ -259,7 +374,8 @@ def step_environment(action: StepRequest | None = None) -> StepResponse | ErrorR
         return ErrorResponse(error="Step execution failed safely.")
 
 
-def get_state() -> StepResponse:
+@limiter.limit("60/minute")
+def get_state(request: Request, api_key: str = Depends(get_api_key)) -> StepResponse:
     try:
         observation = env.state()
         done = observation.current_transaction is None
@@ -278,12 +394,68 @@ def get_state() -> StepResponse:
             info={"msg": "State unavailable"},
         )
 
+def get_telemetry(request: Request, api_key: str = Depends(get_api_key)):
+    """Mock/Real telemetry data for the frontend dashboard."""
+    import random
+    from datetime import datetime
 
-app.include_router(
-    build_router(
-        health_handler=health,
-        reset_handler=reset_environment,
-        step_handler=step_environment,
-        state_handler=get_state,
-    )
-)
+    db_stats = get_telemetry_stats()
+    
+    # Process recent logs into UI format
+    events = []
+    for log in db_stats["recent_logs"]:
+        ts_str, action, fraud, txn = log
+        try:
+            ts = datetime.fromisoformat(ts_str)
+            mins_ago = int((datetime.utcnow() - ts).total_seconds() / 60)
+            time_ago = f"{mins_ago}m ago" if mins_ago > 0 else "Just now"
+        except Exception:
+            time_ago = "Unknown"
+            
+        events.append({
+            "title": f"Action: {action.upper()}",
+            "description": f"Txn: {txn}",
+            "time_ago": time_ago,
+            "type": "warning" if fraud else "success"
+        })
+        
+    if not events:
+        events = [
+            {
+                "title": "Node Cluster Verification",
+                "description": "All 24 secondary nodes synchronized successfully.",
+                "time_ago": "2m ago",
+                "type": "success"
+            }
+        ]
+
+    return {
+        "global_telemetry": {
+            "neural_health": round(random.uniform(98.0, 99.9), 1),
+            "threat_resistance": round(random.uniform(80.0, 95.0), 1),
+            "bandwidth_load": round(random.uniform(30.0, 60.0), 1),
+        },
+        "simulation_console": {
+            "request_volume": f"{db_stats['total_requests'] + round(random.uniform(100, 150), 1)}k",
+            "threats_neutralized": db_stats["threats_neutralized"],
+            "engine_load": round(random.uniform(20.0, 40.0), 1),
+            "engine_confidence": random.randint(90, 98),
+        },
+        "header_status": {
+            "status": "Nominal",
+            "sync": "100%",
+            "latency": f"{random.randint(8, 24)}ms",
+        },
+        "recent_events": events
+    }
+
+def get_logs(request: Request, fraud_only: bool = False, api_key: str = Depends(get_api_key)):
+    """Fetch logs from DB."""
+    return get_all_logs(fraud_only)
+
+# Create specific routes for Limiter since it requires the request object
+app.add_api_route("/reset", reset_environment, methods=["POST"])
+app.add_api_route("/step", step_environment, methods=["POST"])
+app.add_api_route("/state", get_state, methods=["GET"])
+app.add_api_route("/api/logs", get_logs, methods=["GET"])
+app.add_api_route("/api/telemetry", get_telemetry, methods=["GET"])

@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+@theme {
+  --color-slate-950: #020617;
+  --color-slate-900: #0f172a;
+  --color-slate-800: #1e293b;
+  --color-slate-700: #334155;
+  --color-cyan-500: #06b6d4;
+  --color-cyan-400: #22d3ee;
+  --color-emerald-500: #10b981;
+  --color-emerald-400: #34d399;
+  --color-indigo-500: #6366f1;
+  --color-rose-500: #f43f5e;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-slate-950);
+    color: white;
+    font-family: 'Inter', system-ui, sans-serif;
+    /* Hide default cursor for the custom Framer Motion cursor */
+    cursor: none !important;
+  }
+
+  /* Interactive elements also hide default cursor */
+  a, button, select, input {
+    cursor: none !important;
+  }
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #1e293b; /* slate-800 */
+    border-radius: 10px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #06b6d4; /* cyan-500 */
+    box-shadow: 0 0 10px #06b6d4;
+  }
+
+  /* Firefox Scrollbar Support */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #1e293b transparent;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-xl p-4 shadow-xl;
+  }
+  
+  .glass-button {
+    @apply bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 border border-indigo-500/30 rounded-lg px-4 py-2 transition-all duration-200;
+  }
+  
+  .glass-button-primary {
+    @apply bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-4 py-2 shadow-lg hover:shadow-indigo-500/25 transition-all duration-200;
+  }
+}

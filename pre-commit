@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Git Pre-commit Security Hook
+# Place in .git/hooks/pre-commit to automatically check before committing
+
+set -e
+
+echo "🔒 Running pre-commit security checks..."
+
+# Check for .env file
+if git diff --cached --name-only | grep -q "\.env$"; then
+    echo "❌ ERROR: Attempting to commit .env file!"
+    echo "   .env files should NEVER be committed."
+    echo "   Run: git rm --cached .env"
+    exit 1
+fi
+
+# Check for common secrets in staged files
+echo "Scanning for hardcoded secrets..."
+
+SECRETS_FOUND=0
+
+# Check for API keys
+if git diff --cached | grep -i "api.key\|sk-\|secret" | grep -v "os.getenv\|environment\|#"; then
+    echo "⚠️  Potential secrets found in code"
+    SECRETS_FOUND=1
+fi
+
+if [ $SECRETS_FOUND -eq 1 ]; then
+    echo "❌ Please remove secrets before committing."
+    exit 1
+fi
+
+# Check .gitignore
+if ! grep -q "\.env" .gitignore 2>/dev/null; then
+    echo "⚠️  WARNING: .env not in .gitignore"
+fi
+
+echo "✅ Pre-commit checks passed!"
+exit 0

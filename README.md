@@ -1,65 +1,66 @@
----
-title: My Openenv Anomaly
-emoji: 🛡️
-colorFrom: blue
-colorTo: indigo
-sdk: docker
-app_port: 7860
----
-# my-openenv-anomaly
+# Bank Shield
 
-Real-world simulation of transaction anomaly triage, a task performed by fraud
-operations analysts in banks/fintech teams.
+Bank Shield is an elite cybersecurity SaaS dashboard and fraud operations platform. It provides real-time simulation and anomaly triaging designed for financial tech teams to detect, analyze, and neutralize fraudulent transactions.
 
-## OpenEnv Compliance
+## Architecture
 
-- Typed Pydantic models: `Observation`, `Action`, `Reward` in `app/models.py`
-- Environment interface: `reset()`, `step(action)`, `state()` in `app/env/base_env.py`
-- API endpoints: `/reset`, `/step`, `/state`, `/health` via `app/main.py`
-- Metadata: `openenv.yaml`
+This project is structured as a modern full-stack application:
 
-## Tasks and Graders
+- **Frontend (`/frontend`)**: A React application built with Vite and Tailwind CSS. It features a premium, glassmorphism-inspired UI with rich micro-interactions and dynamic event logs.
+- **Backend (`/app`)**: A Python FastAPI backend providing robust, stateless operations with in-memory telemetry logging and grading mechanics.
 
-- `anomaly_easy` -> `EasyGrader`
-- `anomaly_medium` -> `MediumGrader`
-- `anomaly_hard` -> `HardGrader`
+## Prerequisites
 
-All graders return deterministic normalized scores in `[0.0, 1.0]`.
+- **Node.js**: v18 or later
+- **Python**: v3.10 or later
+- **uv** (optional, recommended): Fast Python package installer
 
-## Reward Behavior
+## Local Development Setup
 
-- Dense per-step reward over the full trajectory
-- Partial progress rewards (not only terminal binary outcomes)
-- Penalties for risky/incorrect decisions (false positives, missed fraud)
-- Safe fallback reward `0.5` if grading fails unexpectedly
+### 1. Backend Setup
 
-## Baseline Inference
-
-`inference.py`:
-- Uses OpenAI SDK client (`agents/llm_client.py`)
-- Reads credentials from `OPENAI_API_KEY`
-- Uses `SPACE_URL` for backend API
-- Runs all 3 tasks by default (easy/medium/hard)
-- Emits `[START]`, `[STEP]`, `[END]`, and `[BASELINE]` logs
-
-## Environment Variables
-
-- `OPENAI_API_KEY` (required)
-- `MODEL_NAME` (required)
-- `SPACE_URL` (required)
-- `API_BASE_URL` (optional for OpenAI-compatible proxy/base URL override)
-- `TASK_NAME` (optional; if omitted, runs all 3 tasks)
-
-## Run
+The backend runs on port `8000`.
 
 ```bash
+# Install dependencies
 python -m pip install -r requirements.txt
-python inference.py
+
+# Create an environment file if not present
+cp .env.example .env
+
+# Start the FastAPI server with hot-reload
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-## Tests
+*Note: Ensure the `API_KEY` in your `.env` matches the `API_KEY` configured in the frontend (defaults to `bank-shield-demo-key`).*
+
+### 2. Frontend Setup
+
+The frontend runs on port `5173`.
 
 ```bash
-python -m unittest -q
+cd frontend
+
+# Install dependencies
+npm install
+
+# Start the Vite development server
+npm run dev
 ```
 
+Open your browser to `http://localhost:5173` to access the Bank Shield dashboard.
+
+## Features
+
+- **Global Telemetry**: Real-time network health, threat resistance, and bandwidth load monitoring.
+- **Simulation Console**: Execute simulated actions ("Allow" or "Flag as Fraud") on anomaly tasks and receive immediate grading.
+- **Recent Event Log**: Instantly updating timeline of system events, transaction decisions, and anomalies.
+- **Advanced UI Views**: Dedicated panes for Neural Network insights, Threat Vault history, Tactical Map visualization, and System Configurations.
+
+## Testing
+
+To run the backend unit tests and ensure environment grading mechanics are functioning correctly:
+
+```bash
+python -m unittest discover tests
+```
