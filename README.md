@@ -1,8 +1,19 @@
+---
+title: My Openenv Anomaly
+emoji: 🛡️
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 7860
+---
+
 # 🛡️ Bank Shield
 
 **Bank Shield** is a real-world simulation environment for **transaction anomaly triage** — the kind of decision-making performed daily by fraud operations analysts at banks and fintech companies.
 
 Built as an [OpenEnv](https://openenv.ai)-compliant agentic environment, Bank Shield lets AI agents learn to flag, investigate, and resolve suspicious transactions across varying difficulty levels, with dense reward signals and deterministic grading.
+
+> 🤗 **Live Demo:** This repo is deployed as a Hugging Face Space at [AKJ123/BankShield](https://huggingface.co/spaces/AKJ123/BankShield) — try it live at [https://akj123-bankshield.hf.space](https://akj123-bankshield.hf.space)
 
 ---
 
@@ -18,6 +29,7 @@ Built as an [OpenEnv](https://openenv.ai)-compliant agentic environment, Bank Sh
 - [Getting Started](#getting-started)
 - [Running Tests](#running-tests)
 - [Docker](#docker)
+- [Deployment](#deployment)
 
 ---
 
@@ -26,6 +38,7 @@ Built as an [OpenEnv](https://openenv.ai)-compliant agentic environment, Bank Sh
 Bank Shield simulates a fraud operations desk. An agent receives transaction observations and must decide whether to flag, escalate, approve, or decline each case — mimicking real analyst workflows under uncertainty.
 
 The environment is designed for:
+
 - **RL / LLM agent benchmarking** — structured reward signals across easy, medium, and hard scenarios
 - **Fraud detection research** — realistic transaction anomaly patterns
 - **Agentic evaluation** — multi-step decision making with partial credit and penalties
@@ -47,7 +60,7 @@ Bank_Shield/
 ├── tests/            # Unit tests
 ├── inference.py      # Baseline agent runner
 ├── openenv.yaml      # OpenEnv metadata
-├── Dockerfile        # Container definition
+├── Dockerfile        # Container definition (also used by HF Space)
 └── requirements.txt
 ```
 
@@ -58,7 +71,7 @@ Bank_Shield/
 Bank Shield follows the [OpenEnv](https://openenv.ai) specification:
 
 | Component | Location |
-|---|---|
+|-----------|----------|
 | Typed Pydantic models (`Observation`, `Action`, `Reward`) | `app/models.py` |
 | Environment interface (`reset()`, `step()`, `state()`) | `app/env/base_env.py` |
 | REST API (`/reset`, `/step`, `/state`, `/health`) | `app/main.py` |
@@ -71,7 +84,7 @@ Bank Shield follows the [OpenEnv](https://openenv.ai) specification:
 Three task tiers are available, each mapped to a dedicated grader:
 
 | Task Name | Grader | Description |
-|---|---|---|
+|-----------|--------|-------------|
 | `anomaly_easy` | `EasyGrader` | Clear-cut fraud signals, minimal noise |
 | `anomaly_medium` | `MediumGrader` | Mixed signals, requires multi-step reasoning |
 | `anomaly_hard` | `HardGrader` | Ambiguous cases, adversarial patterns |
@@ -114,7 +127,7 @@ The reward system is designed to reflect the real cost of fraud decisions:
 ## Environment Variables
 
 | Variable | Required | Description |
-|---|---|---|
+|----------|----------|-------------|
 | `OPENAI_API_KEY` | ✅ | API key for the LLM provider |
 | `MODEL_NAME` | ✅ | Model identifier (e.g. `gpt-4o`) |
 | `SPACE_URL` | ✅ | URL of the running Bank Shield backend |
@@ -180,6 +193,24 @@ docker run -p 7860:7860 \
 ```
 
 The server will be available at `http://localhost:7860`.
+
+---
+
+## Deployment
+
+This repository is the source for the live **[BankShield Hugging Face Space](https://huggingface.co/spaces/AKJ123/BankShield)**. The Space is built directly from the `Dockerfile` in this repo and exposes the same FastAPI server at:
+
+```
+https://akj123-bankshield.hf.space
+```
+
+To point your inference agent at the hosted Space instead of a local server, set:
+
+```bash
+export SPACE_URL=https://akj123-bankshield.hf.space
+```
+
+No other changes are needed — the environment API is identical whether running locally or on the Space.
 
 ---
 
